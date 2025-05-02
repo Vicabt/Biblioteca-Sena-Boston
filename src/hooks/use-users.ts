@@ -5,7 +5,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  searchUsers
+  searchUsers,
+  getUserById
 } from '@/lib/firebase/users'
 import type { User } from '@/types/user'
 

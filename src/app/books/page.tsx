@@ -17,6 +17,7 @@ import {
 import { useBooks, useCreateBook, useUpdateBook, useDeleteBook } from '@/hooks/use-books'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
+import type { Book } from '@/types/book'
 import {
   AlertDialog,
   AlertDialogAction,

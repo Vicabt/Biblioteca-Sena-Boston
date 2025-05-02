@@ -20,6 +20,7 @@ const bookSchema = z.object({
   description: z.string().min(1, "La descripción es requerida"),
   category: z.string().min(1, "La categoría es requerida"),
   internalCode: z.string().min(1, "El código interno es requerido"),
+  stockAvailable: z.number().min(0, "El stock debe ser mayor o igual a 0"),
 })
 
 type BookFormData = z.infer<typeof bookSchema>
@@ -40,6 +41,7 @@ export function BookForm({ book, onSubmit, isLoading }: BookFormProps) {
       description: "",
       category: "",
       internalCode: "",
+      stockAvailable: 1,
     },
   })
 
@@ -128,6 +130,24 @@ export function BookForm({ book, onSubmit, isLoading }: BookFormProps) {
             )}
           />
         </div>
+        <FormField
+          control={form.control}
+          name="stockAvailable"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stock Disponible</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min={0}
+                  {...field}
+                  onChange={e => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Guardando..." : book ? "Actualizar Libro" : "Crear Libro"}
         </Button>

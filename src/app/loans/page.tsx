@@ -1,47 +1,47 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useLoans, useReturnLoan } from '@/hooks/use-loans'
 import { LoanList } from '@/components/loans/loan-list'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Card } from '@/components/ui/card'
+import { LoanSkeleton } from '@/components/loans/loan-skeleton'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/use-auth'
 import { checkOverdueLoans, notifyUpcomingDueDate } from '@/lib/utils/notifications'
 import type { Loan } from '@/types/loan'
 
 type FilterStatus = 'all' | 'active' | 'overdue' | 'returned'
 
-export default function LoansPage() {
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
-  const { 
+function LoansContent() {
+  const [filter, setFilter] = useState<FilterStatus>('all')
+  const {
     data,
     isLoading,
     isError,
     error,
-    fetchNextPage,
     hasNextPage,
+    fetchNextPage,
     isFetchingNextPage
   } = useLoans()
   const returnLoan = useReturnLoan()
+  const router = useRouter()
+  const { user } = useAuth()
 
-  const loans = data?.pages.flatMap(page => (page as { loans: Loan[] }).loans) ?? []
-  const filteredLoans = loans.filter(loan => {
-    if (filterStatus === 'all') return true
-    return loan.status === filterStatus
-  })
+  const loans = useMemo(() => 
+    data?.pages.flatMap(page => (page as { loans: Loan[] }).loans) ?? [],
+    [data]
+  )
+
+  useEffect(() => {
+    if (user) {
+      router.push('/loans')
+    }
+  }, [user, router])
 
   useEffect(() => {
     if (loans.length > 0) {
-      // Verificar préstamos vencidos
       checkOverdueLoans(loans)
-      
       // Notificar préstamos próximos a vencer
       loans
         .filter(loan => loan.status === 'active')
@@ -51,10 +51,14 @@ export default function LoansPage() {
 
   const handleReturn = async (loan: Loan) => {
     try {
+      if (!loan.book) {
+        throw new Error('No se encontró información del libro')
+      }
+      
       await returnLoan.mutateAsync({
         id: loan.id,
         bookId: loan.bookId,
-        currentStock: loan.book!.stockAvailable
+        currentStock: loan.book.stockAvailable
       })
       toast.success('Préstamo marcado como devuelto')
     } catch (error) {
@@ -62,6 +66,14 @@ export default function LoansPage() {
       console.error('Error returning loan:', error)
     }
   }
+
+  const filteredLoans = loans.filter(loan => {
+    if (filter === 'all') return true
+    if (filter === 'active') return loan.status === 'active'
+    if (filter === 'overdue') return loan.status === 'overdue'
+    if (filter === 'returned') return loan.status === 'returned'
+    return true
+  })
 
   if (isError) {
     return (
@@ -76,46 +88,56 @@ export default function LoansPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Préstamos</h1>
-        <Select
-          value={filterStatus}
-          onValueChange={(value: string) => setFilterStatus(value as FilterStatus)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Activos</SelectItem>
-            <SelectItem value="overdue">Vencidos</SelectItem>
-            <SelectItem value="returned">Devueltos</SelectItem>
-          </SelectContent>
-        </Select>
+        <Button onClick={() => router.push('/loans/new')}>
+          Nuevo Préstamo
+        </Button>
       </div>
-      
+
+      <div className="flex gap-2">
+        <Button
+          variant={filter === 'all' ? 'default' : 'outline'}
+          onClick={() => setFilter('all')}
+        >
+          Todos
+        </Button>
+        <Button
+          variant={filter === 'active' ? 'default' : 'outline'}
+          onClick={() => setFilter('active')}
+        >
+          Activos
+        </Button>
+        <Button
+          variant={filter === 'overdue' ? 'default' : 'outline'}
+          onClick={() => setFilter('overdue')}
+        >
+          Vencidos
+        </Button>
+        <Button
+          variant={filter === 'returned' ? 'default' : 'outline'}
+          onClick={() => setFilter('returned')}
+        >
+          Devueltos
+        </Button>
+      </div>
+
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="h-[200px] animate-pulse" />
-          ))}
-        </div>
+        <LoanSkeleton />
       ) : filteredLoans.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No hay préstamos que mostrar</p>
+          <p className="text-muted-foreground">No hay préstamos registrados</p>
         </div>
       ) : (
         <>
-        <LoanList
-          loans={filteredLoans}
-          onReturn={handleReturn}
-          isLoading={returnLoan.isPending}
-        />
-          
+          <LoanList
+            loans={filteredLoans}
+            onReturn={handleReturn}
+          />
           {hasNextPage && (
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-center">
               <Button
+                variant="outline"
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                variant="outline"
               >
                 {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
               </Button>
@@ -124,5 +146,17 @@ export default function LoansPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function LoansPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <LoansContent />
+    </Suspense>
   )
 }

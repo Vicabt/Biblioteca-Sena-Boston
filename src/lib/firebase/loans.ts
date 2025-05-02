@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import { addWorkingDays } from '@/lib/utils/dates'
-import type { Loan, LoanDuration } from '@/types/loan'
+import type { Loan } from '@/types/loan'
 import { updateBook } from './books'
 
 const COLLECTION_NAME = 'loans'

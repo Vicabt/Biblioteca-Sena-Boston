@@ -1,10 +1,11 @@
 'use client'
 
+import { Suspense } from 'react'
 import { StatCard } from "@/components/dashboard/stat-card"
 import { BookIcon, BookOpenCheckIcon, AlertCircleIcon, UsersIcon } from "lucide-react"
 import { useStats } from "@/hooks/use-stats"
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { data: stats, isLoading } = useStats()
 
   return (
@@ -41,5 +42,17 @@ export default function DashboardPage() {
         />
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }

@@ -2,16 +2,18 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  type User
+  type User,
 } from 'firebase/auth'
+import { FirebaseError } from 'firebase/app'
 import { auth } from './config'
 
 export async function signIn(email: string, password: string) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
     return userCredential.user
-  } catch (error: any) {
-    switch (error.code) {
+  } catch (error) {
+    const firebaseError = error as FirebaseError
+    switch (firebaseError.code) {
       case 'auth/invalid-credential':
         throw new Error('Credenciales inválidas')
       case 'auth/user-not-found':

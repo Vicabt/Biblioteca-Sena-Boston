@@ -93,7 +93,7 @@ export default function UserClearancePage() {
 
       // Fecha y firma
       const currentDate = formatDate(new Date())
-      const finalY = (doc as any).lastAutoTable.finalY || 200
+      const finalY = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 200
       doc.text(`Fecha de expedición: ${currentDate}`, 20, finalY + 20)
       
       // Guardar PDF

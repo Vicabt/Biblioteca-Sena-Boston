@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { signIn, signOut, onAuthStateChange } from '@/lib/firebase/auth'
 import type { User } from 'firebase/auth'
 import Cookies from 'js-cookie'
@@ -8,7 +8,6 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (user) => {
@@ -44,9 +43,7 @@ export function useAuth() {
         sameSite: 'lax'
       })
 
-      // Redirigir a la página anterior o a / por defecto
-      const from = searchParams.get('from')
-      router.push(from || '/')
+      router.push('/')
       
     } catch (error) {
       if (error instanceof Error) {

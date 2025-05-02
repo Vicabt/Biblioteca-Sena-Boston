@@ -24,7 +24,7 @@ export function Navigation() {
     try {
       await logout()
       toast.success('Sesión cerrada correctamente')
-    } catch (error) {
+    } catch {
       toast.error('Error al cerrar sesión')
     }
   }

@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search } from 'lucide-react'
-import { useUserByDocument } from '@/hooks/use-users'
+import { getUserByDocument } from '@/lib/firebase/users'
 import { toast } from 'sonner'
+import type { User } from '@/types/user'
+import type { Loan } from '@/types/loan'
 
 interface UserSearchProps {
   onUserFound?: (hasActiveLoans: boolean) => void
@@ -21,14 +23,14 @@ export function UserSearch({ onUserFound }: UserSearchProps) {
 
     setIsSearching(true)
     try {
-      const user = await useUserByDocument(documentId)
+      const user = await getUserByDocument(documentId)
       if (!user) {
         toast.error('Usuario no encontrado')
         return
       }
 
       // Verificar préstamos activos
-      const activeLoans = user.loans?.filter(loan => loan.status === 'active') || []
+      const activeLoans = (user as User & { loans?: Loan[] }).loans?.filter((loan: Loan) => loan.status === 'active') || []
       const hasActiveLoans = activeLoans.length > 0
 
       if (hasActiveLoans) {

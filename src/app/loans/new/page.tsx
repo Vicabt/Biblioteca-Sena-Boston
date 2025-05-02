@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useBook } from '@/hooks/use-books'
@@ -16,7 +16,29 @@ interface LoanFormData {
   duration: LoanDuration
 }
 
-export default function NewLoanPage() {
+function BookDetails({ book }: { book: Book }) {
+  return (
+    <div className="p-4 rounded-lg border bg-card">
+      <h2 className="font-semibold mb-2">Detalles del Libro</h2>
+      <dl className="space-y-2">
+        <div>
+          <dt className="text-sm text-muted-foreground">Título</dt>
+          <dd className="text-foreground">{book.title}</dd>
+        </div>
+        <div>
+          <dt className="text-sm text-muted-foreground">Autor</dt>
+          <dd className="text-foreground">{book.author}</dd>
+        </div>
+        <div>
+          <dt className="text-sm text-muted-foreground">Código</dt>
+          <dd className="text-foreground">{book.internalCode}</dd>
+        </div>
+      </dl>
+    </div>
+  )
+}
+
+function NewLoanContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const bookId = searchParams.get('bookId')
@@ -54,8 +76,8 @@ export default function NewLoanPage() {
     try {
       await createLoan.mutateAsync({
         ...data,
-        bookId: book!.id,
-        book: book!,
+        bookId: book.id,
+        book: book,
         startDate: new Date(),
       })
       router.push('/loans')
@@ -78,24 +100,7 @@ export default function NewLoanPage() {
 
       <div className="flex items-start gap-6">
         <div className="flex-1 space-y-4">
-          <div className="p-4 rounded-lg border bg-card">
-            <h2 className="font-semibold mb-2">Detalles del Libro</h2>
-            <dl className="space-y-2">
-              <div>
-                <dt className="text-sm text-muted-foreground">Título</dt>
-                <dd className="text-foreground">{book.title}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Autor</dt>
-                <dd className="text-foreground">{book.author}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Código</dt>
-                <dd className="text-foreground">{book.internalCode}</dd>
-              </div>
-            </dl>
-          </div>
-
+          <BookDetails book={book} />
           <LoanForm 
             book={book} 
             onSubmit={handleSubmit} 
@@ -104,5 +109,17 @@ export default function NewLoanPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NewLoanPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <NewLoanContent />
+    </Suspense>
   )
 } 

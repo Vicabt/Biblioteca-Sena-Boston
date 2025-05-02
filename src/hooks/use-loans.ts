@@ -7,11 +7,12 @@ import {
   returnLoan,
 } from '@/lib/firebase/loans'
 import type { Loan } from '@/types/loan'
+import type { QueryDocumentSnapshot } from 'firebase/firestore'
 
 export function useLoans() {
   return useInfiniteQuery({
     queryKey: ['loans'],
-    queryFn: ({ pageParam }) => getLoans(pageParam),
+    queryFn: ({ pageParam }: { pageParam: QueryDocumentSnapshot | undefined }) => getLoans(pageParam),
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.lastDoc : undefined,
   })
