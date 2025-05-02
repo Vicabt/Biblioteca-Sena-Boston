@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { useAuth } from '@/hooks/use-auth'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { vi } from 'vitest'
@@ -33,7 +33,7 @@ describe('AuthGuard', () => {
     vi.clearAllMocks()
   })
 
-  it('should redirect to login when not authenticated', async () => {
+  it('should redirect to login when not authenticated', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       loading: false,
@@ -41,18 +41,16 @@ describe('AuthGuard', () => {
       logout: vi.fn()
     })
 
-    await act(async () => {
-      render(
-        <AuthGuard>
-          <div>Protected Content</div>
-        </AuthGuard>
-      )
-    })
+    render(
+      <AuthGuard>
+        <div>Protected Content</div>
+      </AuthGuard>
+    )
 
     expect(mockRouter.push).toHaveBeenCalledWith('/login?from=%2F')
   })
 
-  it('should show content when authenticated', async () => {
+  it('should show content when authenticated', () => {
     const mockUser = {
       uid: '123',
       email: 'test@example.com',
@@ -80,13 +78,11 @@ describe('AuthGuard', () => {
       logout: vi.fn()
     })
 
-    await act(async () => {
-      render(
-        <AuthGuard>
-          <div>Protected Content</div>
-        </AuthGuard>
-      )
-    })
+    render(
+      <AuthGuard>
+        <div>Protected Content</div>
+      </AuthGuard>
+    )
 
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
   })
