@@ -12,6 +12,13 @@
 
 # testing
 /coverage
+.vitest
+*.test.ts.snap
+*.test.tsx.snap
+__snapshots__
+test-results
+test-results.json
+vitest.config.ts
 
 # next.js
 /.next/
