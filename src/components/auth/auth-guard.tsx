@@ -9,7 +9,7 @@ const publicPaths = ['/login']
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() || '/' // Provide a default value when pathname is null
 
   useEffect(() => {
     if (!loading) {

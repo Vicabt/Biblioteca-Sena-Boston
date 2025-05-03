@@ -24,8 +24,17 @@ import autoTable from 'jspdf-autotable'
 
 export default function UserClearancePage() {
   const router = useRouter()
-  const params = useParams()
-  const userId = params.id as string
+  const params = useParams<{ id: string }>()
+  const userId = params?.id || ''
+  
+  // Redirect to the users list if no userId is provided
+  useEffect(() => {
+    if (!userId) {
+      router.push('/users')
+      toast.error('ID de usuario no válido')
+    }
+  }, [userId, router])
+  
   const { data: loans = [], isLoading } = useUserLoans(userId)
   const [user, setUser] = useState<User | null>(null)
 
@@ -33,6 +42,11 @@ export default function UserClearancePage() {
   const overdueLoans = loans.filter(loan => loan.status === 'overdue')
   const activeLoans = loans.filter(loan => loan.status === 'active')
   const returnedLoans = loans.filter(loan => loan.status === 'returned')
+
+  // Set the page title
+  useEffect(() => {
+    document.title = "Paz y Salvo - Biblioteca SENA";
+  }, []);
 
   useEffect(() => {
     if (loans.length > 0 && loans[0].user) {

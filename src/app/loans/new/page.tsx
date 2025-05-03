@@ -41,7 +41,7 @@ function BookDetails({ book }: { book: Book }) {
 function NewLoanContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const bookId = searchParams.get('bookId')
+  const bookId = searchParams?.get('bookId')
   const [book, setBook] = useState<Book | null>(null)
   const { data: bookData, isLoading, error } = useBook(bookId || '')
   const createLoan = useCreateLoan()

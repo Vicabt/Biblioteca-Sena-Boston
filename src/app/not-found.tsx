@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react'
 function NotFoundContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const from = searchParams.get('from')
+  const from = searchParams?.get('from')
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
