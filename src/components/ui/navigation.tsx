@@ -11,6 +11,8 @@ import { toast } from 'sonner'
 const navigation = [
   { name: 'Inicio', href: '/' },
   { name: 'Libros', href: '/books' },
+  { name: 'Autores', href: '/authors' },
+  { name: 'Categorías', href: '/categories' },
   { name: 'Préstamos', href: '/loans' },
   { name: 'Usuarios', href: '/users' },
   { name: 'Alertas', href: '/calendar' },

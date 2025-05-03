@@ -11,6 +11,15 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useAuthors } from "@/hooks/use-authors"
+import { useCategories } from "@/hooks/use-categories"
 import type { Book } from "@/types/book"
 
 const bookSchema = z.object({
@@ -32,6 +41,9 @@ interface BookFormProps {
 }
 
 export function BookForm({ book, onSubmit, isLoading }: BookFormProps) {
+  const { data: authors = [] } = useAuthors()
+  const { data: categories = [] } = useCategories()
+  
   const form = useForm<BookFormData>({
     resolver: zodResolver(bookSchema),
     defaultValues: book || {
@@ -68,9 +80,23 @@ export function BookForm({ book, onSubmit, isLoading }: BookFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Autor</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar autor" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {authors.map((author) => (
+                      <SelectItem key={author.id} value={author.name}>
+                        {author.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -109,9 +135,23 @@ export function BookForm({ book, onSubmit, isLoading }: BookFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoría</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar categoría" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -141,7 +181,11 @@ export function BookForm({ book, onSubmit, isLoading }: BookFormProps) {
                   type="number" 
                   min={0}
                   {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  value={field.value || 0}
+                  onChange={e => {
+                    const value = e.target.value === '' ? 0 : Number(e.target.value);
+                    field.onChange(isNaN(value) ? 0 : value);
+                  }}
                 />
               </FormControl>
               <FormMessage />

@@ -139,6 +139,12 @@ export async function createLoan(
     if (data.book!.stockAvailable <= 0) {
       throw new Error('El libro no está disponible para préstamo')
     }
+    
+    // Verificar si el libro ya está prestado
+    const existingLoan = await getActiveLoanByBook(data.bookId)
+    if (existingLoan) {
+      throw new Error('Este libro ya se encuentra prestado')
+    }
 
     // Verificar estado del usuario
     const userStatus = await checkUserStatus(data.userId)
