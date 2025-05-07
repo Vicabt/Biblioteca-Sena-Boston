@@ -67,13 +67,27 @@ function LoansContent() {
     }
   }
 
-  const filteredLoans = loans.filter(loan => {
-    if (filter === 'all') return true
-    if (filter === 'active') return loan.status === 'active'
-    if (filter === 'overdue') return loan.status === 'overdue'
-    if (filter === 'returned') return loan.status === 'returned'
-    return true
-  })
+  const filteredLoans = useMemo(() => {
+    return loans.filter(loan => {
+      const now = new Date()
+      
+      if (filter === 'all') return true
+      
+      if (filter === 'active') {
+        return loan.status === 'active' && (!loan.dueDate || loan.dueDate >= now)
+      }
+      
+      if (filter === 'overdue') {
+        return loan.status === 'active' && loan.dueDate && loan.dueDate < now
+      }
+      
+      if (filter === 'returned') {
+        return loan.status === 'returned'
+      }
+      
+      return true
+    })
+  }, [loans, filter])
 
   if (isError) {
     return (

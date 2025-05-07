@@ -16,6 +16,7 @@ import {
 import { db } from './config'
 import { addWorkingDays } from '@/lib/utils/dates'
 import type { Loan } from '@/types/loan'
+import type { User } from '@/types/user'
 import { updateBook } from './books'
 
 const COLLECTION_NAME = 'loans'
@@ -26,8 +27,7 @@ export async function getLoans(lastDoc?: QueryDocumentSnapshot) {
     const loansRef = collection(db, COLLECTION_NAME)
     let q = query(
       loansRef,
-      where('status', '==', 'active'),
-      orderBy('dueDate', 'asc'),
+      orderBy('createdAt', 'desc'),
       limit(PAGE_SIZE)
     )
 
@@ -38,15 +38,36 @@ export async function getLoans(lastDoc?: QueryDocumentSnapshot) {
     const querySnapshot = await getDocs(q)
     const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
     
-    const loans = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      startDate: doc.data().startDate?.toDate(),
-      dueDate: doc.data().dueDate?.toDate(),
-      returnDate: doc.data().returnDate?.toDate(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-    })) as Loan[]
+    // Obtener los préstamos
+    const loansPromises = querySnapshot.docs.map(async (docSnapshot) => {
+      const loanData = docSnapshot.data()
+      
+      // Obtener datos del usuario si existe userId
+      let userData = null
+      if (loanData.userId) {
+        const userDocRef = doc(db, 'users', loanData.userId)
+        const userDoc = await getDoc(userDocRef)
+        if (userDoc.exists()) {
+          userData = {
+            ...userDoc.data() as User,
+            id: userDoc.id
+          }
+        }
+      }
+      
+      return {
+        id: docSnapshot.id,
+        ...loanData,
+        user: userData,
+        startDate: loanData.startDate?.toDate(),
+        dueDate: loanData.dueDate?.toDate(),
+        returnDate: loanData.returnDate?.toDate(),
+        createdAt: loanData.createdAt?.toDate(),
+        updatedAt: loanData.updatedAt?.toDate(),
+      }
+    })
+    
+    const loans = await Promise.all(loansPromises) as Loan[]
 
     return {
       loans,

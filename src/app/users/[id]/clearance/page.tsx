@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useUserLoans } from '@/hooks/use-loans'
+import { useUser } from '@/hooks/use-users'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -35,7 +36,8 @@ export default function UserClearancePage() {
     }
   }, [userId, router])
   
-  const { data: loans = [], isLoading } = useUserLoans(userId)
+  const { data: loans = [], isLoading: loansLoading } = useUserLoans(userId)
+  const { data: userData, isLoading: userLoading } = useUser(userId)
   const [user, setUser] = useState<User | null>(null)
 
   const hasActiveLoans = loans.some(loan => loan.status === 'active' || loan.status === 'overdue')
@@ -48,21 +50,34 @@ export default function UserClearancePage() {
     document.title = "Paz y Salvo - Biblioteca SENA";
   }, []);
 
+  // Obtener información del usuario directamente desde Firebase
   useEffect(() => {
-    if (loans.length > 0 && loans[0].user) {
+    if (userData) {
+      setUser(userData)
+    } else if (loans.length > 0 && loans[0].user) {
+      // Fallback: intentar obtener el usuario desde los préstamos si está disponible
       setUser(loans[0].user as User)
     }
-  }, [loans])
+  }, [userData, loans])
 
   const handleDownload = () => {
-    if (!user || hasActiveLoans) return
+    if (!user) {
+      toast.error('No hay información del usuario disponible')
+      return
+    }
 
     try {
-      const doc = new jsPDF()
+      // Crear un nuevo documento PDF con orientación portrait
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
       
       // Título
       doc.setFontSize(20)
-      doc.text('Certificado de Paz y Salvo', 105, 20, { align: 'center' })
+      const title = hasActiveLoans ? 'Reporte de Estado de Préstamos' : 'Certificado de Paz y Salvo'
+      doc.text(title, 105, 20, { align: 'center' })
       doc.setFontSize(16)
       doc.text('Biblioteca SENA', 105, 30, { align: 'center' })
       
@@ -70,49 +85,90 @@ export default function UserClearancePage() {
       doc.setFontSize(12)
       doc.text('Información del Usuario', 20, 50)
       doc.setFontSize(10)
+      
+      // Asegurarse de que todos los campos del usuario existan
+      const userName = user.name || 'No disponible'
+      const userDocumentId = user.documentId || 'No disponible'
+      const userEmail = user.email || 'No disponible'
+      const userPhone = user.phone || 'No disponible'
+      
       doc.text([
-        `Nombre: ${user.name}`,
-        `Documento: ${user.documentId}`,
-        `Email: ${user.email}`,
-        `Teléfono: ${user.phone}`,
+        `Nombre: ${userName}`,
+        `Documento: ${userDocumentId}`,
+        `Email: ${userEmail}`,
+        `Teléfono: ${userPhone}`,
       ], 20, 60)
 
       // Estado de préstamos
       doc.setFontSize(12)
       doc.text('Estado de Préstamos', 20, 90)
       doc.setFontSize(10)
-      doc.text([
+      
+      const statusLines = [
         `Total de préstamos realizados: ${loans.length}`,
         `Préstamos devueltos: ${returnedLoans.length}`,
-        `\nSe certifica que el usuario se encuentra a PAZ Y SALVO con la biblioteca.`,
-        `No registra préstamos pendientes ni vencidos a la fecha.`,
-      ], 20, 100)
+      ]
+      
+      if (hasActiveLoans) {
+        statusLines.push(
+          `Préstamos activos: ${activeLoans.length}`,
+          `Préstamos vencidos: ${overdueLoans.length}`,
+          `\nEl usuario tiene préstamos pendientes por devolver.`
+        )
+      } else {
+        statusLines.push(
+          `\nSe certifica que el usuario se encuentra a PAZ Y SALVO con la biblioteca.`,
+          `No registra préstamos pendientes ni vencidos a la fecha.`
+        )
+      }
+      
+      doc.text(statusLines, 20, 100)
 
       // Historial de préstamos
       doc.setFontSize(12)
       doc.text('Historial de Préstamos', 20, 140)
 
+      // Preparar datos para la tabla asegurándose de que no haya valores undefined
       const tableData = loans.map(loan => [
-        loan.book?.title || '',
+        loan.book?.title || 'Sin título',
         formatDate(loan.startDate),
         loan.returnDate ? formatDate(loan.returnDate) : formatDate(loan.dueDate),
         getStatusText(loan.status),
       ])
 
+      // Generar tabla con autoTable
       autoTable(doc, {
         startY: 150,
         head: [['Libro', 'Fecha Préstamo', 'Fecha Devolución', 'Estado']],
         body: tableData,
+        didDrawPage: () => {
+          // Puedes agregar encabezados o pies de página aquí si es necesario
+        }
       })
 
       // Fecha y firma
       const currentDate = formatDate(new Date())
-      const finalY = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 200
+      // Obtener la posición Y final de la tabla
+      const finalY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 200
       doc.text(`Fecha de expedición: ${currentDate}`, 20, finalY + 20)
       
       // Guardar PDF
-      doc.save(`paz_y_salvo_${user.documentId}.pdf`)
-      toast.success('Paz y salvo descargado correctamente')
+      try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const fileName = hasActiveLoans 
+          ? `reporte_prestamos_${userDocumentId}_${timestamp}.pdf` 
+          : `paz_y_salvo_${userDocumentId}_${timestamp}.pdf`
+        
+        doc.save(fileName)
+        
+        const successMessage = hasActiveLoans 
+          ? 'Reporte de préstamos descargado correctamente' 
+          : 'Certificado de paz y salvo descargado correctamente'
+        toast.success(successMessage)
+      } catch (saveError) {
+        console.error('Error al guardar el PDF:', saveError)
+        toast.error('Error al guardar el documento PDF')
+      }
     } catch (error) {
       console.error('Error generating PDF:', error)
       toast.error('Error al generar el paz y salvo')
@@ -145,6 +201,8 @@ export default function UserClearancePage() {
     }
   }
 
+  const isLoading = loansLoading || userLoading
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -197,7 +255,6 @@ export default function UserClearancePage() {
             <CardTitle>Estado de Préstamos</CardTitle>
             <Button 
               variant="outline" 
-              disabled={hasActiveLoans}
               onClick={handleDownload}
             >
               <Download className="h-4 w-4 mr-2" />
@@ -284,4 +341,4 @@ export default function UserClearancePage() {
       </Card>
     </div>
   )
-} 
+}
