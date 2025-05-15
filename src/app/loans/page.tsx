@@ -9,23 +9,25 @@ import { LoanSkeleton } from '@/components/loans/loan-skeleton'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { checkOverdueLoans, notifyUpcomingDueDate } from '@/lib/utils/notifications'
+import { ArrowLeft } from 'lucide-react'
 import type { Loan } from '@/types/loan'
 
 type FilterStatus = 'all' | 'active' | 'overdue' | 'returned'
 
 function LoansContent() {
+  const router = useRouter()
   const [filter, setFilter] = useState<FilterStatus>('all')
+  
   const {
     data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading,
     isError,
-    error,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage
+    error
   } = useLoans()
   const returnLoan = useReturnLoan()
-  const router = useRouter()
   const { user } = useAuth()
 
   const loans = useMemo(() => 
@@ -92,8 +94,15 @@ function LoansContent() {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <p className="text-red-500">Error al cargar los préstamos</p>
-        <p className="text-sm text-muted-foreground">{error?.message}</p>
+        <p className="text-red-500">
+          {error instanceof Error 
+            ? `Error al cargar los préstamos: ${error.message}` 
+            : 'Error al cargar los préstamos'}
+        </p>
+        <Button variant="outline" onClick={() => router.push('/')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver al inicio
+        </Button>
       </div>
     )
   }

@@ -40,30 +40,70 @@ export async function getLoans(lastDoc?: QueryDocumentSnapshot) {
     
     // Obtener los préstamos
     const loansPromises = querySnapshot.docs.map(async (docSnapshot) => {
-      const loanData = docSnapshot.data()
-      
-      // Obtener datos del usuario si existe userId
-      let userData = null
-      if (loanData.userId) {
-        const userDocRef = doc(db, 'users', loanData.userId)
-        const userDoc = await getDoc(userDocRef)
-        if (userDoc.exists()) {
-          userData = {
-            ...userDoc.data() as User,
-            id: userDoc.id
+      try {
+        const loanData = docSnapshot.data()
+        
+        // Obtener datos del usuario si existe userId
+        let userData = null
+        let bookData = {}
+        
+        if (loanData.userId) {
+          try {
+            const userDocRef = doc(db, 'users', loanData.userId)
+            const userDoc = await getDoc(userDocRef)
+            if (userDoc.exists()) {
+              userData = {
+                ...userDoc.data() as User,
+                id: userDoc.id
+              }
+            }
+          } catch (userError) {
+            console.error(`Error fetching user data for loan ${docSnapshot.id}:`, userError)
+            // Continuar con el préstamo aunque no se pueda obtener el usuario
           }
         }
-      }
-      
-      return {
-        id: docSnapshot.id,
-        ...loanData,
-        user: userData,
-        startDate: loanData.startDate?.toDate(),
-        dueDate: loanData.dueDate?.toDate(),
-        returnDate: loanData.returnDate?.toDate(),
-        createdAt: loanData.createdAt?.toDate(),
-        updatedAt: loanData.updatedAt?.toDate(),
+        
+        // Obtener datos del libro
+        if (loanData.bookId) {
+          try {
+            const bookDocRef = doc(db, 'books', loanData.bookId)
+            const bookDoc = await getDoc(bookDocRef)
+            if (bookDoc.exists()) {
+              bookData = bookDoc.data()
+            }
+          } catch (bookError) {
+            console.error(`Error fetching book data for loan ${docSnapshot.id}:`, bookError)
+            // Continuar con el préstamo aunque no se pueda obtener el libro
+          }
+        }
+        
+        return {
+          id: docSnapshot.id,
+          ...loanData,
+          user: userData,
+          book: bookData,
+          startDate: loanData.startDate?.toDate(),
+          dueDate: loanData.dueDate?.toDate(),
+          returnDate: loanData.returnDate?.toDate(),
+          createdAt: loanData.createdAt?.toDate(),
+          updatedAt: loanData.updatedAt?.toDate(),
+        }
+      } catch (loanError) {
+        console.error(`Error processing loan ${docSnapshot.id}:`, loanError)
+        // Devolver un objeto de préstamo con datos mínimos para evitar errores
+        return {
+          id: docSnapshot.id,
+          error: true,
+          // Propiedades mínimas necesarias
+          userId: '',
+          bookId: '',
+          startDate: new Date(),
+          dueDate: new Date(),
+          status: 'active' as const,
+          duration: '3days' as const,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       }
     })
     
@@ -76,7 +116,14 @@ export async function getLoans(lastDoc?: QueryDocumentSnapshot) {
     }
   } catch (error) {
     console.error('Error getting loans:', error)
-    throw new Error('Error al cargar los préstamos')
+    // Devolver un array vacío en lugar de lanzar un error
+    // para que la interfaz pueda mostrar un mensaje amigable
+    return {
+      loans: [],
+      lastDoc: null,
+      hasMore: false,
+      error: error instanceof Error ? error.message : 'Error al cargar los préstamos'
+    }
   }
 }
 
@@ -156,8 +203,13 @@ export async function createLoan(
   data: Omit<Loan, 'id' | 'status' | 'dueDate' | 'returnDate' | 'createdAt' | 'updatedAt'>
 ) {
   try {
+    // Verificar que el libro exista
+    if (!data.book || !data.bookId) {
+      throw new Error('Información del libro no disponible')
+    }
+    
     // Verificar disponibilidad del libro
-    if (data.book!.stockAvailable <= 0) {
+    if (data.book.stockAvailable <= 0) {
       throw new Error('El libro no está disponible para préstamo')
     }
     
@@ -165,6 +217,11 @@ export async function createLoan(
     const existingLoan = await getActiveLoanByBook(data.bookId)
     if (existingLoan) {
       throw new Error('Este libro ya se encuentra prestado')
+    }
+
+    // Verificar que el usuario exista
+    if (!data.userId) {
+      throw new Error('Información del usuario no disponible')
     }
 
     // Verificar estado del usuario

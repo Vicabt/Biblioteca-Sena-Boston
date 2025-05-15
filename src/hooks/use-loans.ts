@@ -12,9 +12,18 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore'
 export function useLoans() {
   return useInfiniteQuery({
     queryKey: ['loans'],
-    queryFn: ({ pageParam }: { pageParam: QueryDocumentSnapshot | undefined }) => getLoans(pageParam),
+    queryFn: async ({ pageParam }: { pageParam: QueryDocumentSnapshot | undefined }) => {
+      const result = await getLoans(pageParam)
+      
+      // Si hay un error en la respuesta, lanzarlo para que React Query lo maneje
+      if ('error' in result && result.error) {
+        throw new Error(result.error.toString())
+      }
+      
+      return result
+    },
     initialPageParam: undefined,
-    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.lastDoc : undefined,
+    getNextPageParam: (lastPage) => lastPage.lastDoc ? lastPage.lastDoc : undefined,
   })
 }
 

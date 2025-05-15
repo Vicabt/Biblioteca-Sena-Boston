@@ -78,19 +78,27 @@ export function LoanForm({ book, onSubmit, isLoading }: LoanFormProps) {
       form.setValue('userId', user.id)
 
       // Verificar estado del usuario
-      const status = await checkUserStatus(user.id)
-      setUserStatus(status)
+      try {
+        const status = await checkUserStatus(user.id)
+        setUserStatus(status)
 
-      if (!status.canBorrow) {
-        if (!status.isInGoodStanding) {
-          toast.error('El usuario tiene préstamos vencidos pendientes')
-        } else if (status.activeLoansCount >= 3) {
-          toast.error('El usuario ha alcanzado el límite de préstamos activos')
+        if (!status.canBorrow) {
+          if (!status.isInGoodStanding) {
+            toast.error('El usuario tiene préstamos vencidos pendientes')
+          } else if (status.activeLoansCount >= 3) {
+            toast.error('El usuario ha alcanzado el límite de préstamos activos')
+          }
         }
+      } catch (statusError) {
+        console.error('Error checking user status:', statusError)
+        toast.error('Error al verificar el estado del usuario')
+        setUserStatus(null)
       }
     } catch (error) {
-      toast.error('Error al buscar el usuario')
+      toast.error('Error al buscar el usuario: ' + (error instanceof Error ? error.message : 'Error desconocido'))
       console.error('Error searching user:', error)
+      setSelectedUser(null)
+      setUserStatus(null)
     } finally {
       setIsSearching(false)
     }

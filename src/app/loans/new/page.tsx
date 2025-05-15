@@ -60,14 +60,36 @@ function NewLoanContent() {
     )
   }
 
-  if (error || !bookId || !book) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <p className="text-red-500">Error al cargar el libro</p>
+        <p className="text-red-500">Error al cargar el libro: {error instanceof Error ? error.message : 'Error desconocido'}</p>
         <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver
         </Button>
+      </div>
+    )
+  }
+  
+  // Si no hay bookId o no se ha cargado el libro todavía
+  if (!bookId || !book) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+          <h1 className="text-3xl font-bold">Nuevo Préstamo</h1>
+        </div>
+        
+        <div className="p-6 border rounded-lg bg-card">
+          <p className="mb-4">Para crear un préstamo, primero seleccione un libro desde la sección de libros.</p>
+          <Button onClick={() => router.push('/books')}>
+            Ir a seleccionar un libro
+          </Button>
+        </div>
       </div>
     )
   }
@@ -77,7 +99,6 @@ function NewLoanContent() {
       await createLoan.mutateAsync({
         ...data,
         bookId: book.id,
-        book: book,
         startDate: new Date(),
       })
       router.push('/loans')
@@ -122,4 +143,4 @@ export default function NewLoanPage() {
       <NewLoanContent />
     </Suspense>
   )
-} 
+}

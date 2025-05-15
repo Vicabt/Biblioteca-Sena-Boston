@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { useCreateUser, useUpdateUser } from '@/hooks/use-users'
@@ -26,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { User } from '@/types/user'
+import type { User, UserRole } from '@/types/user'
 
 interface UserDialogProps {
   user?: User
@@ -41,17 +42,34 @@ export function UserDialog({ user, open, onOpenChange, onClose }: UserDialogProp
 
   const form = useForm({
     defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
-      documentId: user?.documentId || '',
-      phone: user?.phone || '',
-      role: user?.role || 'student',
-      formation: user?.formation || '',
-      groupNumber: user?.groupNumber || '',
-      status: user?.status || 'active',
+      name: '',
+      email: '',
+      documentId: '',
+      phone: '',
+      role: 'student' as UserRole,
+      formation: '',
+      groupNumber: '',
+      status: 'active' as 'active' | 'inactive',
       active: true
     }
   })
+  
+  // Actualizar valores del formulario cuando cambia el usuario
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name || '',
+        email: user.email || '',
+        documentId: user.documentId || '',
+        phone: user.phone || '',
+        role: user.role || 'student' as UserRole,
+        formation: user.formation || '',
+        groupNumber: user.groupNumber || '',
+        status: user.status || 'active' as 'active' | 'inactive',
+        active: true
+      })
+    }
+  }, [user, form])
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
@@ -142,7 +160,7 @@ export function UserDialog({ user, open, onOpenChange, onClose }: UserDialogProp
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Rol</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccione un rol" />
@@ -193,7 +211,7 @@ export function UserDialog({ user, open, onOpenChange, onClose }: UserDialogProp
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Estado</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccione un estado" />
@@ -234,4 +252,4 @@ export function UserDialog({ user, open, onOpenChange, onClose }: UserDialogProp
       </DialogContent>
     </Dialog>
   )
-} 
+}
